@@ -384,3 +384,4 @@ obj-$(CONFIG_MSM_HSIC_SYSMON_TEST) += hsic_sysmon_test.o
 obj-$(CONFIG_HUAWEI_MTK6252_MODEM) += mtk6252_dev.o
 
 obj-$(CONFIG_MSM_RPM_SMD) += rpm-smd.o
+

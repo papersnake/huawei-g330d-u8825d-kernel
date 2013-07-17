@@ -12,6 +12,7 @@
  * There are run-time debug flags enabled via the debug_mask module param, or
  * via the DEFAULT_DEBUG_MASK. See xt_qtaguid_internal.h.
  */
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #define DEBUG
 
 #include <linux/file.h>

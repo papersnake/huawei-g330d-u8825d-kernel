@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio_event.h>

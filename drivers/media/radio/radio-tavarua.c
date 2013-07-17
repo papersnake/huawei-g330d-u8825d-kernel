@@ -13,7 +13,7 @@
 /*
  * Qualcomm Tavarua FM core driver
  */
-
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 /* driver definitions */
 #define DRIVER_AUTHOR "Qualcomm"
 #define DRIVER_NAME "radio-tavarua"

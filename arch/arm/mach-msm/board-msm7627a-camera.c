@@ -28,6 +28,13 @@
 #endif
 #include <mach/vreg.h>
 
+#define REG_CTRLCLOCK		0x00
+#define REG_IT_STATUS		0x04
+#define REG_MODE		0x08
+#define REG_STATUS		0x0C
+#define REG_CAMDATA		0x10
+#define REG_GPIO		0x14
+#define REG_PEAK_COUNTER	0x18
 #define GPIO_SKU1_CAM_VGA_SHDN    18
 #define GPIO_SKU1_CAM_VGA_RESET_N 29
 #define GPIO_SKU3_CAM_5MP_SHDN_N   5         /* PWDN */
@@ -1535,6 +1542,108 @@ static void camera_sensor_pwd_config(void)
 	}
 }
 #endif
+
+#ifndef CONFIG_MSM_CAMERA_V4L2
+#define LCD_CAMERA_LDO_2V8 35 /* SKU1&SKU3 2.8V LDO */
+#define SKU3_LCD_CAMERA_LDO_1V8 40 /* SKU3 1.8V LDO */
+#define SKU7_LCD_CAMERA_LDO_1V8 58 /* SKU7 1.8V LDO */
+
+static int lcd_camera_ldo_1v8 = SKU3_LCD_CAMERA_LDO_1V8;
+
+static void lcd_camera_power_init(void)
+{
+	int rc = 0;
+
+	pr_debug("lcd_camera_power_init\n");
+
+	if (machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7())
+		lcd_camera_ldo_1v8 = SKU7_LCD_CAMERA_LDO_1V8;
+	else
+		lcd_camera_ldo_1v8 = SKU3_LCD_CAMERA_LDO_1V8;
+
+	/* LDO_EXT2V8 */
+	if (gpio_request(LCD_CAMERA_LDO_2V8, "lcd_camera_ldo_2v8")) {
+		pr_err("failed to request gpio lcd_camera_ldo_2v8\n");
+		return;
+	}
+
+	rc = gpio_tlmm_config(GPIO_CFG(LCD_CAMERA_LDO_2V8, 0,
+		GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
+		GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (rc < 0) {
+		pr_err("%s: unable to enable lcd_camera_ldo_2v8!\n", __func__);
+		goto fail_gpio2;
+	}
+
+	/* LDO_EVT1V8 */
+	if (gpio_request(lcd_camera_ldo_1v8, "lcd_camera_ldo_1v8")) {
+		pr_err("failed to request gpio lcd_camera_ldo_1v8\n");
+		goto fail_gpio2;
+	}
+
+	rc = gpio_tlmm_config(GPIO_CFG(lcd_camera_ldo_1v8, 0,
+		GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
+		GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (rc < 0) {
+		pr_err("%s: unable to enable lcd_camera_ldo_1v8!\n", __func__);
+		goto fail_gpio1;
+	}
+
+	return;
+
+fail_gpio1:
+	gpio_free(lcd_camera_ldo_1v8);
+fail_gpio2:
+	gpio_free(LCD_CAMERA_LDO_2V8);
+
+	return;
+}
+
+static int lcd_camera_power_on_sku3(void)
+{
+	int rc = 0;
+
+	pr_debug("turn on sku3 lcd_camera_ldo_1v8\n");
+	gpio_set_value_cansleep(lcd_camera_ldo_1v8, 1);
+
+	pr_debug("turn on sku3 lcd_camera_ldo\n");
+	gpio_set_value_cansleep(LCD_CAMERA_LDO_2V8, 1);
+
+	return rc;
+}
+
+static int lcd_camera_power_off_sku3(void)
+{
+	int rc = 0;
+
+	pr_debug("turn off sku3 lcd_camera_ldo_1v8\n");
+	gpio_set_value_cansleep(lcd_camera_ldo_1v8, 0);
+
+	pr_debug("turn off sku3 lcd_camera_ldo\n");
+	gpio_set_value_cansleep(LCD_CAMERA_LDO_2V8, 0);
+
+	gpio_free(lcd_camera_ldo_1v8);
+	gpio_free(LCD_CAMERA_LDO_2V8);
+
+	return rc;
+}
+
+int lcd_camera_power_onoff(int on)
+{
+	int rc = 0;
+
+	pr_debug("lcd_camera_power_onoff on = %d,\n", on);
+
+	if (on)
+		rc = lcd_camera_power_on_sku3();
+	else
+		rc = lcd_camera_power_off_sku3();
+
+	return rc;
+}
+EXPORT_SYMBOL(lcd_camera_power_onoff);
+#endif
+
 void __init msm7627a_camera_init(void)
 {
 
